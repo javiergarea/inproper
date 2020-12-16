@@ -46,7 +46,7 @@ inproper_run(App) ->
     rebar_api:debug("Found tests in: ~p~n", [Paths]),
     ok.
 
--spec find_tests(string()) -> [string()].
+-spec find_tests(file:name()) -> [file:filename_all()].
 find_tests(Dir) ->
     case file:list_dir(Dir) of
         {ok, Filenames} ->
@@ -63,7 +63,7 @@ find_tests(Dir) ->
             exit(Reason)
     end.
 
--spec get_file_type(string()) ->
+-spec get_file_type(file:filename_all()) ->
                        device | directory | other | regular | symlink | undefined.
 get_file_type(File) ->
     rebar_api:debug("Looking for the type of file: ~p~n", [File]),
