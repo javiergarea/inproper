@@ -2,6 +2,8 @@
 
 -export([init/1, do/1, format_error/1]).
 
+-include_lib("kernel/include/file.hrl").
+
 -define(PROVIDER, inproper).
 -define(DEPS, [app_discovery]).
 
@@ -39,7 +41,7 @@ format_error(Reason) ->
 %% ===================================================================
 -spec inproper_run(rebar_state:t()) -> ok.
 inproper_run(App) ->
-    TestDir = rebar_app_info:dir(App) ++ "/test",
+    TestDir = filename:join([rebar_app_info:dir(App), "test"]),
     rebar_api:debug("Finding tests in: ~p~n", [TestDir]),
     Paths = find_tests(TestDir),
     rebar_api:debug("Found tests in: ~p~n", [Paths]),
@@ -49,7 +51,26 @@ inproper_run(App) ->
 find_tests(Dir) ->
     case file:list_dir(Dir) of
         {ok, Filenames} ->
-            [Dir ++ Filename || Filename <- Filenames];
+            Files = [filename:join([Dir, Filename]) || Filename <- Filenames],
+            lists:flatmap(fun (File) -> 
+                            case get_file_type(File) of 
+                                directory -> 
+                                    find_tests(File);
+                                _ -> 
+                                    [File] 
+                            end 
+                          end, Files);
+        {error, Reason} ->
+            format_error(Reason),
+            exit(Reason)
+    end.
+
+-spec get_file_type(string()) -> device | directory | other | regular | symlink | undefined.
+get_file_type(File) ->
+    rebar_api:debug("Looking for the type of file: ~p~n", [File]),
+    case file:read_file_info(File) of
+        {ok, FileInfo} ->
+            FileInfo#file_info.type;
         {error, Reason} ->
             format_error(Reason),
             exit(Reason)
