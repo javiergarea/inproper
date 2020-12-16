@@ -12,18 +12,18 @@
 %% ===================================================================
 -spec init(rebar_state:t()) -> {ok, rebar_state:t()}.
 init(State) ->
-    Provider = providers:create([
-            {name, ?PROVIDER},            % The 'user friendly' name of the task
-            {module, ?MODULE},            % The module implementation of the task
-            {bare, true},                 % The task can be run by the user, always true
-            {deps, ?DEPS},                % The list of dependencies
-            {example, "rebar3 inproper"}, % How to use the plugin
-            {opts, []},                   % list of options understood by the plugin
-            {short_desc, "Induction of PropEr properties based on sample unit tests."},
-            {desc, "Induction of PropEr properties based on sample unit tests."}
-    ]),
+    Provider =
+        providers:create([{name, ?PROVIDER},            % The 'user friendly' name of the task
+                          {module, ?MODULE},            % The module implementation of the task
+                          {bare,
+                           true},                 % The task can be run by the user, always true
+                          {deps, ?DEPS},                % The list of dependencies
+                          {example, "rebar3 inproper"}, % How to use the plugin
+                          {opts, []},                   % list of options understood by the plugin
+                          {short_desc,
+                           "Induction of PropEr properties based on sample unit tests."},
+                          {desc, "Induction of PropEr properties based on sample unit tests."}]),
     {ok, rebar_state:add_provider(State, Provider)}.
-
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
@@ -31,10 +31,9 @@ do(State) ->
     lists:foreach(fun inproper_run/1, rebar_state:project_apps(State)),
     {ok, State}.
 
--spec format_error(any()) ->  iolist().
+-spec format_error(any()) -> iolist().
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
-
 
 %% ===================================================================
 %% Private
@@ -52,20 +51,20 @@ find_tests(Dir) ->
     case file:list_dir(Dir) of
         {ok, Filenames} ->
             Files = [filename:join([Dir, Filename]) || Filename <- Filenames],
-            lists:flatmap(fun (File) -> 
-                            case get_file_type(File) of 
-                                directory -> 
-                                    find_tests(File);
-                                _ -> 
-                                    [File] 
-                            end 
-                          end, Files);
+            lists:flatmap(fun(File) ->
+                             case get_file_type(File) of
+                                 directory -> find_tests(File);
+                                 _ -> [File]
+                             end
+                          end,
+                          Files);
         {error, Reason} ->
             format_error(Reason),
             exit(Reason)
     end.
 
--spec get_file_type(string()) -> device | directory | other | regular | symlink | undefined.
+-spec get_file_type(string()) ->
+                       device | directory | other | regular | symlink | undefined.
 get_file_type(File) ->
     rebar_api:debug("Looking for the type of file: ~p~n", [File]),
     case file:read_file_info(File) of
