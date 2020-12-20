@@ -6,21 +6,55 @@
 
 -behaviour(test_discovery).
 
--spec find_tests(file:name()) ->
+-define(EUNIT_HEADER, "-include_lib(\"eunit/include/eunit.hrl\").").
+
+-spec find_tests(Dir :: file:name()) ->
                     {ok, [file:filename_all()]} | {error, file:posix() | badarg}.
 find_tests(Dir) ->
+    case rec_list_dir(Dir) of
+        RecFiles ->
+            ErlFiles =
+                lists:filter(fun(File) ->
+                                case string:find(File, ".erl", trailing) of
+                                    nomatch -> false;
+                                    _ -> true
+                                end
+                             end,
+                             RecFiles),
+            TestFiles =
+                lists:filter(fun(File) ->
+                                case file:read_file(File) of
+                                    {ok, Binary} ->
+                                        rebar_api:debug("Succesfully read ~p~n", [File]),
+                                        case binary:match(Binary, <<?EUNIT_HEADER>>) of
+                                            nomatch -> false;
+                                            _ -> true
+                                        end;
+                                    {error, Reason} ->
+                                        rebar_api:debug("Error reading ~p: ~p~n", [File, Reason]),
+                                        false
+                                end
+                             end,
+                             ErlFiles),
+            {ok, TestFiles};
+        {error, Reason} ->
+            {error, Reason}
+    end.
+
+rec_list_dir(Dir) ->
     case file:list_dir(Dir) of
         {ok, Filenames} ->
             Files = [filename:join([Dir, Filename]) || Filename <- Filenames],
-            lists:flatmap(fun(File) ->
-                             case get_file_type(File) of
-                                 {ok, directory} -> find_tests(File);
-                                 {ok, regular} -> [File];
-                                 {error, Reason} -> {error, Reason};
-                                 _ -> ok
-                             end
-                          end,
-                          Files);
+            RecFiles =
+                lists:flatmap(fun(File) ->
+                                 case get_file_type(File) of
+                                     directory -> rec_list_dir(File);
+                                     regular -> [File];
+                                     _ -> []
+                                 end
+                              end,
+                              Files),
+            RecFiles;
         {error, Reason} ->
             {error, Reason}
     end.
@@ -31,7 +65,7 @@ get_file_type(File) ->
         {ok, FileInfo} ->
             FileType = FileInfo#file_info.type,
             rebar_api:debug("Type found: ~p~n", [FileType]),
-            {ok, FileType};
-        {error, Reason} ->
-            {error, Reason}
+            FileType;
+        {error, _Reason} ->
+            error
     end.
