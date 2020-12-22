@@ -90,7 +90,7 @@ get_test_paths(App, TestDiscovery, Dirs) ->
         [] ->
             TestDir = filename:join([rebar_app_info:dir(App), "test"]),
             rebar_api:debug("Finding tests in: ~p~n", [TestDir]),
-            case TestDiscovery:find_tests(TestDir) of
+            case TestDiscovery:find_testfiles(TestDir) of
                 {ok, Paths} ->
                     Paths;
                 {error, Reason} ->

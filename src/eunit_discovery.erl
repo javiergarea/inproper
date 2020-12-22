@@ -1,6 +1,6 @@
 -module(eunit_discovery).
 
--export([find_tests/1]).
+-export([find_testfiles/1]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -8,10 +8,12 @@
 
 -define(EUNIT_HEADER, "-include_lib(\"eunit/include/eunit.hrl\").").
 
--spec find_tests(Dir :: file:name()) ->
-                    {ok, [file:filename_all()]} | {error, file:posix() | badarg}.
-find_tests(Dir) ->
+-spec find_testfiles(Dir :: file:name()) ->
+                        {ok, [file:filename_all()]} | {error, file:posix() | badarg}.
+find_testfiles(Dir) ->
     case rec_list_dir(Dir) of
+        {error, Reason} ->
+            {error, Reason};
         RecFiles ->
             ErlFiles =
                 lists:filter(fun(File) ->
@@ -36,9 +38,7 @@ find_tests(Dir) ->
                                 end
                              end,
                              ErlFiles),
-            {ok, TestFiles};
-        {error, Reason} ->
-            {error, Reason}
+            {ok, TestFiles}
     end.
 
 rec_list_dir(Dir) ->
