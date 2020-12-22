@@ -83,7 +83,8 @@ parse_test_dirs(Args) ->
 
 inproper_app_run(App, TestDiscovery, Dirs) ->
     Paths = get_test_paths(App, TestDiscovery, Dirs),
-    rebar_api:debug("Found tests in: ~p~n", [Paths]).
+    rebar_api:debug("Found tests in: ~p~n", [Paths]),
+    get_test_info(TestDiscovery, Paths).
 
 get_test_paths(App, TestDiscovery, Dirs) ->
     case Dirs of
@@ -100,3 +101,12 @@ get_test_paths(App, TestDiscovery, Dirs) ->
         _ ->
             Dirs
     end.
+
+get_test_info(TestDiscovery, Paths) ->
+    case Paths of
+        [] ->
+            ok;
+        _ ->
+            lists:foreach(fun(File) -> TestDiscovery:read_tests(File) end, Paths)
+    end,
+    ok.

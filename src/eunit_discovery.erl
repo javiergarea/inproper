@@ -1,6 +1,6 @@
 -module(eunit_discovery).
 
--export([find_testfiles/1]).
+-export([find_testfiles/1, read_tests/1]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -8,6 +8,9 @@
 
 -define(EUNIT_HEADER, "-include_lib(\"eunit/include/eunit.hrl\").").
 
+%% ===================================================================
+%% Public API
+%% ===================================================================
 -spec find_testfiles(Dir :: file:name()) ->
                         {ok, [file:filename_all()]} | {error, file:posix() | badarg}.
 find_testfiles(Dir) ->
@@ -41,6 +44,32 @@ find_testfiles(Dir) ->
             {ok, TestFiles}
     end.
 
+-spec read_tests(file:filename_all()) -> ok.
+read_tests(File) ->
+    case file:read_file(File) of
+        {ok, Binary} ->
+            case erl_scan:string(
+                     binary:bin_to_list(Binary))
+            of
+                {ok, Tokens, _Location} ->
+                    rebar_api:debug("Scanning ~p: ~p~n", [File, Tokens]),
+                    case erl_parse:parse_exprs(Tokens) of
+                        {ok, ExprList} ->
+                            rebar_api:debug("Parsing ~p: ~p~n", [File, ExprList]);
+                        {error, Reason} ->
+                            rebar_api:debug("Error parsing ~p: ~p~n", [File, Reason])
+                    end;
+                {error, Reason, _Location} ->
+                    rebar_api:debug("Error scanning ~p: ~p~n", [File, Reason])
+            end;
+        {error, Reason} ->
+            rebar_api:debug("Error reading ~p: ~p~n", [File, Reason])
+    end,
+    ok.
+
+%% ===================================================================
+%% Private
+%% ===================================================================
 rec_list_dir(Dir) ->
     case file:list_dir(Dir) of
         {ok, Filenames} ->
